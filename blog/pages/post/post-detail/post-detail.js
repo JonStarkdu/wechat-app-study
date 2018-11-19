@@ -1,5 +1,8 @@
 // pages/post/post-detail/post-detail.js
 import { DBPost } from '../../../db/DBPost.js'
+//获取小程序app对象
+var app = getApp();
+console.log(app)
 Page({
 
   /**
@@ -60,20 +63,82 @@ Page({
    */
   onMusicTap:function(event){
     if(this.data.isPlayingMusic){
+      //暂停音乐播放
       wx.pauseBackgroundAudio();
       this.setData({
         isPlayingMusic:false
       })
+      app.globalData.g_isPlayingMusic = false;
     } else {
+      //播放音乐
       wx.playBackgroundAudio({
         dataUrl: this.postData.music.url,
         title:this.postData.music.title,
         coverImgUrl:this.postData.music.coverImg
       })
+      this.setData({
+        isPlayingMusic: true
+      })
+      app.globalData.g_isPlayingMusic = true;
+      app.globalData.g_currentMusicPostId = this.postData.postId;
     }
-    this.setData({
-      isPlayingMusic:true
+  },
+
+  /**
+   * 设置音乐播放监听
+   */
+  setMusicMonitor:function(){
+    var that = this;
+    wx.onBackgroundAudioStop(function(){
+      that.setData({
+        isPlayingMusic:false
+      })
+      app.globalData.g_isPlayingMusic = false;
+    });
+    wx.onBackgroundAudioPlay(function(event){
+      //只处理当前页面的音乐播放
+      if(app.globalData.g_currentMusicPostId === that.postData.postId){
+        that.setData({
+          isPlayingMusic:true
+        })
+      }
+      app.globalData.g_isPlayingMusic = true;
     })
+    wx.onBackgroundAudioPause(function(){
+      //只处理当前页面的音乐暂停
+      if (app.globalData.g_currentMusicPostId === that.postData.postId) {
+        that.setData({
+          isPlayingMusic: false
+        })
+      }
+      app.globalData.g_isPlayingMusic = false;
+    })
+  },
+  /**
+   * 初始化音乐播放图标状态
+   */
+  initMusicStatus(){
+    var currentMusicPostId = this.postData.postId;
+    if (app.globalData.g_isPlayingMusic && currentMusicPostId === currentPostId){
+      //如果全局播放的音乐是当前文章的音乐，将图标设为正在播放
+      this.setData({
+        isPlayingMusic: true
+      })
+    } else {
+      this.setData({
+        isPlayingMusic: false
+      })
+    }
+  },
+  /**
+   * 定义页面分享函数
+   */
+  onShareAppMessage:function(){
+    return {
+      title:this.postData.title,
+      desc:this.postData.content,
+      path:"/pages/post/post_detail/post_detail"
+    }
   },
   /**
    * 生命周期函数--监听页面加载
@@ -87,6 +152,10 @@ Page({
       post:this.postData
     })
     this.addReadingTimes();
+    //onLoad中调用,才能使监听生效
+    this.setMusicMonitor();
+    //
+    this.initMusicStatus();
   },
 
   /**

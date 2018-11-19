@@ -1,7 +1,7 @@
 Page({
   onTapJump:function(event){
-    wx.redirectTo({
-      url: '/pages/post/post',
+    wx.switchTab({
+      url: '../post/post',
       success:function(){
         console.log("jump success")
       },
